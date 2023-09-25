@@ -60,11 +60,11 @@ class WebScraper:
                 "text": body
             }
         except:
-            time.sleep(random.randint(2,8)
+            time.sleep(random.randint(2,8))
             r = requests.get(url)
             status_code = r.status_code
             if r.url != url:
-                time.sleep(random.randint(5,15)
+                time.sleep(random.randint(5,15))
                 r = self.session.get(r.url)
                 body = r.html.find(selector, first = True).text
                 oupt = {
