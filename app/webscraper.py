@@ -1,4 +1,5 @@
-
+import time
+import random
 from bs4 import BeautifulSoup
 from requests_html import HTMLSession
 import requests
@@ -50,11 +51,29 @@ class WebScraper:
                 status_code [str]: response code
                 text [str]: text returned from webpage selector
         '''
-        r = self.session.get(url)
-        status_code = r.status_code
-        body = r.html.find(selector, first = True).text
-        oupt = {
-            "status_code": status_code,
-            "text": body
-        }
+        try:
+            r = self.session.get(url)
+            status_code = r.status_code
+            body = r.html.find(selector, first = True).text
+            oupt = {
+                "status_code": status_code,
+                "text": body
+            }
+        except:
+            time.sleep(random.randint(2,8))
+            r = requests.get(url)
+            status_code = r.status_code
+            if r.url != url:
+                time.sleep(random.randint(5,15))
+                r = self.session.get(r.url)
+                body = r.html.find(selector, first = True).text
+                oupt = {
+                    "status_code": r.status_code,
+                    "text": body
+                }
+            else:
+                oupt = {
+                    "status_code": status_code,
+                    "text": "Error parsing."
+                }
         return oupt
