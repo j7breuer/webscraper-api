@@ -4,8 +4,8 @@ pipeline {
     environment {
         image_name = "${env.NEXUS}:5000/webscraper-api:latest"
         container_name = "webscraper-api"
-        host_port = "4567"
-        container_port = "4567"
+        host_port = "7654"
+        container_port = "7654"
     }
 
     stages {
