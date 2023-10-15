@@ -28,4 +28,4 @@ COPY . /app
 
 # Run flask API
 ENTRYPOINT ["python3", "app/app.py"]
-EXPOSE 5000
+EXPOSE 7654
