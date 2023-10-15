@@ -1,6 +1,13 @@
 pipeline {
     agent any
 
+    environment {
+        image_name = "${env.NEXUS}:5000/webscraper-api:latest"
+        container_name = "webscraper-api"
+        host_port = "4567"
+        container_port = "4567"
+    }
+
     stages {
         stage('PyTest Unit Tests') {
             steps {
@@ -26,7 +33,7 @@ pipeline {
                 echo '\n=======================\n[START] Docker Build...\n=======================\n'
                 echo 'Running docker build...'
                 script {
-                    buildImage = docker.build("webscraper_api:${env.BUILD_ID}")
+                    buildImage = docker.build("${container_name}:${env.BUILD_ID}")
                 }
                 echo '\n=====================\n[END] Docker Push to Nexus...\n=====================\n'
             }
@@ -36,7 +43,7 @@ pipeline {
                 echo '\n=======================\n[START] Docker Push to Nexus...\n=======================\n'
                 echo 'Tagging docker build...'
                 script {
-                    docker.withRegistry("https://192.168.50.25:5000/analytics/", "nexus-login") {
+                    docker.withRegistry("https://${env.NEXUS}:5000/analytics/", "nexus-login") {
                         buildImage.push("${env.BUILD_NUMBER}")
                         buildImage.push("latest")
                     }
@@ -44,10 +51,31 @@ pipeline {
                 echo '\n=====================\n[END] Docker Push to Nexus...\n=====================\n'
             }
         }
-        stage('Docker Publish') {
+        stage('Docker Publish to Remote') {
+            when {
+                expression { return env.BRANCH_NAME == 'master' }
+            }
             steps {
                 echo '\n===========================\n[START] Publishing Build...\n===========================\n'
                 echo 'Running docker push...'
+                sshagent(credentials: ['docker-login']) {
+                    withCredentials([usernamePassword(credentialsId: 'nexus-login', passwordVariable: 'NEXUS_PASSWORD', usernameVariable: 'NEXUS_USERNAME')]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no user@${env.DOCKER} "
+                                if docker ps -a | grep -q ${container_name}; then
+                                    docker stop ${container_name}
+                                    docker rm ${container_name}
+                                fi
+
+                                docker login -u ${NEXUS_USERNAME} -p ${NEXUS_PASSWORD} ${env.NEXUS}:5000
+                                docker pull ${image_name}
+                                docker run -d --name ${container_name} --restart=unless-stopped -p ${host_port}:${container_port} --privileged ${image_name}
+                                docker system prune -af
+                                docker logout
+                            "
+                        """
+                    }
+                }
                 echo '\n=========================\n[END] Publishing Build...\n=========================\n'
             }
         }
